@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Polished Tetris — Playable</title>
+        <style>
+            :root {
+                --cell: 28px;
+                --cols: 10;
+                --rows: 20;
+            }
+            * {
+                box-sizing: border-box;
+                font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica,
+                    Arial;
+            }
+            html,
+            body {
+                height: 100%;
+                margin: 0;
+            }
+            body {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(180deg, #041428 0%, #07122a 100%);
+                color: #e6eef8;
+            }
+            .container {
+                width: 100%;
+                max-width: 980px;
+                padding: 18px;
+            }
+            .layout {
+                display: grid;
+                grid-template-columns: 1fr 260px;
+                gap: 18px;
+                align-items: start;
+            }
+
+            .panel {
+                background: linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0.02),
+                    rgba(0, 0, 0, 0.06)
+                );
+                padding: 14px;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(2, 6, 23, 0.6);
+            }
+            h1 {
+                margin: 0 0 6px;
+                font-size: 20px;
+            }
+            .sub {
+                color: #93b4c8;
+                font-size: 13px;
+            }
+
+            /* board */
+            .board-wrap {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .board {
+                width: calc(var(--cell) * var(--cols));
+                height: calc(var(--cell) * var(--rows));
+                background: linear-gradient(180deg, #041526, #022034);
+                border-radius: 10px;
+                padding: 6px;
+                position: relative;
+                overflow: hidden;
+            }
+            .grid {
+                width: 100%;
+                height: 100%;
+                display: grid;
+                grid-template-columns: repeat(var(--cols), 1fr);
+                grid-template-rows: repeat(var(--rows), 1fr);
+                gap: 4px;
+            }
+
+            .cell {
+                width: 100%;
+                height: 100%;
+                border-radius: 6px;
+                background: transparent;
+                transition: transform 120ms linear;
+            }
+            .filled {
+                box-shadow: inset 0 -8px 18px rgba(0, 0, 0, 0.45),
+                    0 3px 0 rgba(255, 255, 255, 0.02);
+                border: 1px solid rgba(255, 255, 255, 0.03);
+            }
+            .ghost {
+                opacity: 0.18;
+                filter: grayscale(40%);
+            }
+
+            /* stats */
+            .stats {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .stat {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .big {
+                font-weight: 700;
+                font-size: 26px;
+            }
+
+            .controls {
+                font-size: 13px;
+                color: #9fb2c8;
+            }
+            .buttons {
+                display: flex;
+                gap: 8px;
+                margin-top: 8px;
+            }
+            button {
+                background: #0f2b47;
+                color: #dff0ff;
+                padding: 8px 12px;
+                border-radius: 8px;
+                border: 0;
+                cursor: pointer;
+            }
+            button.ghost {
+                background: transparent;
+                border: 1px solid rgba(255, 255, 255, 0.04);
+            }
+
+            /* next and hold */
+            .mini-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-rows: repeat(4, 1fr);
+                gap: 6px;
+                padding: 8px;
+                background: linear-gradient(180deg, #042033, #06263a);
+                border-radius: 8px;
+            }
+            .mini-cell {
+                width: 28px;
+                height: 28px;
+                border-radius: 6px;
+            }
+
+            /* overlay */
+            .overlay {
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(
+                    0deg,
+                    rgba(2, 6, 23, 0.6),
+                    rgba(2, 6, 23, 0.6)
+                );
+                color: #fff;
+                font-size: 18px;
+                backdrop-filter: blur(3px);
+            }
+
+            .mobile-controls {
+                display: none;
+                margin-top: 12px;
+                gap: 8px;
+            }
+            @media (max-width: 860px) {
+                .layout {
+                    grid-template-columns: 1fr;
+                }
+                .mobile-controls {
+                    display: flex;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="layout">
+                <div>
+                    <div class="panel board-wrap">
+                        <div
+                            style="
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                            "
+                        >
+                            <div>
+                                <h1>Tetris — Polished</h1>
+                                <div class="sub">
+                                    Improved visuals, hold, ghost piece, 5-piece
+                                    preview, smooth controls, local high score
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px">
+                                <button id="start">Start</button>
+                                <button id="pause" class="ghost">Pause</button>
+                                <button id="mute" class="ghost">Mute</button>
+                            </div>
+                        </div>
+
+                        <div
+                            id="board"
+                            class="board"
+                            tabindex="0"
+                            aria-label="Tetris board"
+                        >
+                            <div id="grid" class="grid"></div>
+                            <div
+                                id="overlay"
+                                class="overlay"
+                                style="display: none"
+                            ></div>
+                        </div>
+
+                        <div
+                            style="
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                margin-top: 6px;
+                            "
+                        >
+                            <div class="controls">
+                                ← → move • ↑ rotate • ↓ soft • Space hard •
+                                Hold: C
+                            </div>
+                            <div style="display: flex; gap: 6px">
+                                <button id="leftBtn" class="ghost">◀</button>
+                                <button id="rotBtn" class="ghost">⤴</button>
+                                <button id="rightBtn" class="ghost">▶</button>
+                                <button id="softBtn" class="ghost">▼</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="panel stats">
+                    <div class="stat">
+                        <div>Score</div>
+                        <div id="score" class="big">0</div>
+                    </div>
+                    <div class="stat">
+                        <div>Level</div>
+                        <div id="level">1</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; margin-bottom: 6px">
+                            Next
+                        </div>
+                        <div
+                            id="next"
+                            class="mini-grid"
+                            aria-hidden="true"
+                        ></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 13px; margin-bottom: 6px">
+                            Hold
+                        </div>
+                        <div
+                            id="hold"
+                            class="mini-grid"
+                            aria-hidden="true"
+                        ></div>
+                    </div>
+                    <div class="stat">
+                        <div>High score</div>
+                        <div id="high" class="big">0</div>
+                    </div>
+                    <div style="margin-top: 6px" class="controls">
+                        Tip: Clear multiple lines for combo multipliers. Hold a
+                        piece (C) to swap strategically.
+                    </div>
+                </aside>
+            </div>
+        </div>
+
+        <script>
+            // Polished single-file Tetris — features: hold, ghost, 5-next queue, DAS, soft/hard score, lock delay, SFX (simple), localStorage high score
+            (() => {
+                const COLS = 10,
+                    ROWS = 20,
+                    CELL = 28;
+                const gridEl = document.getElementById("grid");
+                const boardEl = document.getElementById("board");
+                const overlay = document.getElementById("overlay");
+                const nextEl = document.getElementById("next");
+                const holdEl = document.getElementById("hold");
+                const scoreEl = document.getElementById("score");
+                const levelEl = document.getElementById("level");
+                const highEl = document.getElementById("high");
+                const startBtn = document.getElementById("start");
+                const pauseBtn = document.getElementById("pause");
+                const muteBtn = document.getElementById("mute");
+
+                // create grid cells
+                const cells = [];
+                for (let r = 0; r < ROWS; r++) {
+                    for (let c = 0; c < COLS; c++) {
+                        const d = document.createElement("div");
+                        d.className = "cell";
+                        d.style.width = "100%";
+                        d.style.height = "100%";
+                        gridEl.appendChild(d);
+                        cells.push(d);
+                    }
+                }
+
+                // mini grids
+                const miniNextCells = [];
+                const miniHoldCells = [];
+                for (let i = 0; i < 16; i++) {
+                    const n = document.createElement("div");
+                    n.className = "mini-cell";
+                    n.style.width = "100%";
+                    n.style.height = "100%";
+                    nextEl.appendChild(n);
+                    miniNextCells.push(n);
+                }
+                for (let i = 0; i < 16; i++) {
+                    const h = document.createElement("div");
+                    h.className = "mini-cell";
+                    h.style.width = "100%";
+                    h.style.height = "100%";
+                    holdEl.appendChild(h);
+                    miniHoldCells.push(h);
+                }
+
+                // shapes
+                const TETROMINOES = {
+                    I: {
+                        rot: [
+                            [
+                                [0, 0, 0, 0],
+                                [1, 1, 1, 1],
+                                [0, 0, 0, 0],
+                                [0, 0, 0, 0],
+                            ],
+                            [
+                                [0, 0, 1, 0],
+                                [0, 0, 1, 0],
+                                [0, 0, 1, 0],
+                                [0, 0, 1, 0],
+                            ],
+                        ],
+                    },
+                    J: {
+                        rot: [
+                            [
+                                [1, 0, 0],
+                                [1, 1, 1],
+                                [0, 0, 0],
+                            ],
+                            [
+                                [0, 1, 1],
+                                [0, 1, 0],
+                                [0, 1, 0],
+                            ],
+                            [
+                                [0, 0, 0],
+                                [1, 1, 1],
+                                [0, 0, 1],
+                            ],
+                            [
+                                [0, 1, 0],
+                                [0, 1, 0],
+                                [1, 1, 0],
+                            ],
+                        ],
+                    },
+                    L: {
+                        rot: [
+                            [
+                                [0, 0, 1],
+                                [1, 1, 1],
+                                [0, 0, 0],
+                            ],
+                            [
+                                [0, 1, 0],
+                                [0, 1, 0],
+                                [0, 1, 1],
+                            ],
+                            [
+                                [0, 0, 0],
+                                [1, 1, 1],
+                                [1, 0, 0],
+                            ],
+                            [
+                                [1, 1, 0],
+                                [0, 1, 0],
+                                [0, 1, 0],
+                            ],
+                        ],
+                    },
+                    O: {
+                        rot: [
+                            [
+                                [0, 1, 1, 0],
+                                [0, 1, 1, 0],
+                                [0, 0, 0, 0],
+                                [0, 0, 0, 0],
+                            ],
+                        ],
+                    },
+                    S: {
+                        rot: [
+                            [
+                                [0, 1, 1],
+                                [1, 1, 0],
+                                [0, 0, 0],
+                            ],
+                            [
+                                [0, 1, 0],
+                                [0, 1, 1],
+                                [0, 0, 1],
+                            ],
+                        ],
+                    },
+                    Z: {
+                        rot: [
+                            [
+                                [1, 1, 0],
+                                [0, 1, 1],
+                                [0, 0, 0],
+                            ],
+                            [
+                                [0, 0, 1],
+                                [0, 1, 1],
+                                [0, 1, 0],
+                            ],
+                        ],
+                    },
+                    T: {
+                        rot: [
+                            [
+                                [0, 1, 0],
+                                [1, 1, 1],
+                                [0, 0, 0],
+                            ],
+                            [
+                                [0, 1, 0],
+                                [0, 1, 1],
+                                [0, 1, 0],
+                            ],
+                            [
+                                [0, 0, 0],
+                                [1, 1, 1],
+                                [0, 1, 0],
+                            ],
+                            [
+                                [0, 1, 0],
+                                [1, 1, 0],
+                                [0, 1, 0],
+                            ],
+                        ],
+                    },
+                };
+                const COLORS = {
+                    I: "#59e3ff",
+                    J: "#6fa8ff",
+                    L: "#ffb86b",
+                    O: "#ffd25b",
+                    S: "#6bff9c",
+                    Z: "#ff6b6b",
+                    T: "#d86bff",
+                };
+                const NAMES = Object.keys(TETROMINOES);
+
+                // game state
+                let board,
+                    bag,
+                    queue,
+                    current,
+                    curRot,
+                    curPos,
+                    hold = null,
+                    canHold = true;
+                let score = 0,
+                    level = 1,
+                    lines = 0,
+                    highScore = 0;
+                let running = false,
+                    paused = false,
+                    lastTime = 0,
+                    dropInterval = 800,
+                    lockDelay = 500,
+                    lockTimer = 0;
+                let softDrop = false,
+                    dasTimer = 0,
+                    dasDelay = 150,
+                    dasRepeat = 60,
+                    moving = null,
+                    muted = false;
+
+                // sound (simple)
+                const audioCtx = new (window.AudioContext ||
+                    window.webkitAudioContext)();
+                function beep(freq, time = 0.04) {
+                    if (muted) return;
+                    const o = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    o.type = "sine";
+                    o.frequency.value = freq;
+                    g.gain.value = 0.06;
+                    o.connect(g);
+                    g.connect(audioCtx.destination);
+                    o.start();
+                    o.stop(audioCtx.currentTime + time);
+                }
+
+                function newBoard() {
+                    return Array.from({ length: ROWS }, () =>
+                        Array(COLS).fill(0)
+                    );
+                }
+
+                function shuffleBag() {
+                    const arr = [...NAMES];
+                    for (let i = arr.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [arr[i], arr[j]] = [arr[j], arr[i]];
+                    }
+                    return arr;
+                }
+
+                function refillQueue() {
+                    while (queue.length < 5) {
+                        if (!bag.length) bag = shuffleBag();
+                        queue.push(bag.pop());
+                    }
+                }
+
+                function spawn() {
+                    current = queue.shift();
+                    refillQueue();
+                    curRot = 0;
+                    curPos = { r: -2, c: Math.floor((COLS - 4) / 2) };
+                    canHold = true;
+                    lockTimer = 0;
+                    renderNext();
+                    if (collision(curPos, curRot)) {
+                        gameOver();
+                    }
+                }
+
+                function collision(pos, rot, overridePiece = current) {
+                    const shape = TETROMINOES[overridePiece].rot[rot];
+                    for (let r = 0; r < shape.length; r++)
+                        for (let c = 0; c < shape[r].length; c++) {
+                            if (shape[r][c]) {
+                                const br = pos.r + r,
+                                    bc = pos.c + c;
+                                if (bc < 0 || bc >= COLS || br >= ROWS)
+                                    return true;
+                                if (br >= 0 && board[br][bc]) return true;
+                            }
+                        }
+                    return false;
+                }
+
+                function rotate(dir = 1) {
+                    const newRot =
+                        (curRot + dir + TETROMINOES[current].rot.length) %
+                        TETROMINOES[current].rot.length; // simple kicks
+                    const kicks = [
+                        { r: 0, c: 0 },
+                        { r: 0, c: 1 },
+                        { r: 0, c: -1 },
+                        { r: -1, c: 0 },
+                        { r: 1, c: 0 },
+                    ];
+                    for (const k of kicks) {
+                        const p = { r: curPos.r + k.r, c: curPos.c + k.c };
+                        if (!collision(p, newRot)) {
+                            curPos = p;
+                            curRot = newRot;
+                            beep(900);
+                            render();
+                            return;
+                        }
+                    }
+                }
+
+                function hardDrop() {
+                    while (!collision({ r: curPos.r + 1, c: curPos.c }, curRot))
+                        curPos.r++;
+                    lockPiece(true);
+                }
+
+                function softDropStep() {
+                    if (!collision({ r: curPos.r + 1, c: curPos.c }, curRot)) {
+                        curPos.r++;
+                        score++;
+                    } else {
+                        lockPiece(false);
+                    }
+                }
+
+                function lockPiece(hard = false) {
+                    // write into board
+                    const shape = TETROMINOES[current].rot[curRot];
+                    for (let r = 0; r < shape.length; r++)
+                        for (let c = 0; c < shape[r].length; c++) {
+                            if (shape[r][c]) {
+                                const br = curPos.r + r,
+                                    bc = curPos.c + c;
+                                if (br >= 0) board[br][bc] = current;
+                            }
+                        }
+                    beep(120);
+                    checkLines();
+                    spawn();
+                    render();
+                }
+
+                function checkLines() {
+                    let removed = 0;
+                    for (let r = ROWS - 1; r >= 0; r--) {
+                        if (board[r].every((v) => v)) {
+                            board.splice(r, 1);
+                            board.unshift(Array(COLS).fill(0));
+                            removed++;
+                            r++;
+                        }
+                    }
+                    if (removed) {
+                        lines += removed;
+                        score +=
+                            ([0, 40, 100, 300, 1200][removed] || 1200) * level;
+                        scoreEl.textContent = score;
+                        level = Math.floor(lines / 10) + 1;
+                        levelEl.textContent = level;
+                        dropInterval = Math.max(80, 800 - (level - 1) * 60);
+                        beep(700);
+                        if (score > highScore) {
+                            highScore = score;
+                            localStorage.setItem("tetris_high", highScore);
+                            highEl.textContent = highScore;
+                        }
+                    }
+                }
+
+                function holdPiece() {
+                    if (!canHold) return;
+                    beep(600);
+                    if (!hold) {
+                        hold = current;
+                        spawnIfNeeded();
+                    } else {
+                        [hold, current] = [current, hold];
+                        curRot = 0;
+                        curPos = { r: -2, c: Math.floor((COLS - 4) / 2) };
+                        if (collision(curPos, curRot)) gameOver();
+                    }
+                    canHold = false;
+                    renderHold();
+                    render();
+                }
+
+                function spawnIfNeeded() {
+                    if (!queue.length) refillQueue();
+                    spawn();
+                }
+
+                function gameOver() {
+                    running = false;
+                    overlay.style.display = "flex";
+                    overlay.textContent = "Game Over — Score: " + score;
+                    beep(180);
+                }
+
+                // rendering
+                function render() {
+                    // clear
+                    for (let r = 0; r < ROWS; r++)
+                        for (let c = 0; c < COLS; c++) {
+                            const el = cells[r * COLS + c];
+                            el.className = "cell";
+                            el.style.background = "transparent";
+                        }
+                    // locked
+                    for (let r = 0; r < ROWS; r++)
+                        for (let c = 0; c < COLS; c++) {
+                            if (board[r][c]) {
+                                const el = cells[r * COLS + c];
+                                el.classList.add("filled");
+                                el.style.background = COLORS[board[r][c]];
+                            }
+                        }
+                    // ghost
+                    const ghostPos = findGhost();
+                    const ghostShape = TETROMINOES[current].rot[curRot];
+                    for (let r = 0; r < ghostShape.length; r++)
+                        for (let c = 0; c < ghostShape[r].length; c++) {
+                            if (ghostShape[r][c]) {
+                                const br = ghostPos.r + r,
+                                    bc = ghostPos.c + c;
+                                if (
+                                    br >= 0 &&
+                                    br < ROWS &&
+                                    bc >= 0 &&
+                                    bc < COLS
+                                ) {
+                                    const el = cells[br * COLS + bc];
+                                    el.classList.add("filled", "ghost");
+                                    el.style.background = COLORS[current];
+                                }
+                            }
+                        }
+                    // current
+                    const shape = TETROMINOES[current].rot[curRot];
+                    for (let r = 0; r < shape.length; r++)
+                        for (let c = 0; c < shape[r].length; c++) {
+                            if (shape[r][c]) {
+                                const br = curPos.r + r,
+                                    bc = curPos.c + c;
+                                if (
+                                    br >= 0 &&
+                                    br < ROWS &&
+                                    bc >= 0 &&
+                                    bc < COLS
+                                ) {
+                                    const el = cells[br * COLS + bc];
+                                    el.classList.add("filled");
+                                    el.style.background = COLORS[current];
+                                }
+                            }
+                        }
+                }
+
+                function findGhost() {
+                    let p = { r: curPos.r, c: curPos.c };
+                    while (!collision({ r: p.r + 1, c: p.c }, curRot)) p.r++;
+                    return p;
+                }
+
+                function renderNext() {
+                    // show only first in queue
+                    miniNextCells.forEach((x) => {
+                        x.style.background = "transparent";
+                        x.className = "mini-cell";
+                    });
+                    const next = queue[0];
+                    const shape = TETROMINOES[next].rot[0];
+                    for (let r = 0; r < shape.length; r++)
+                        for (let c = 0; c < shape[r].length; c++) {
+                            if (shape[r][c]) {
+                                const idx = r * 4 + c;
+                                if (miniNextCells[idx]) {
+                                    miniNextCells[idx].style.background =
+                                        COLORS[next];
+                                    miniNextCells[idx].classList.add("filled");
+                                }
+                            }
+                        }
+                }
+
+                function renderHold() {
+                    miniHoldCells.forEach((x) => {
+                        x.style.background = "transparent";
+                        x.className = "mini-cell";
+                    });
+                    if (hold) {
+                        const shape = TETROMINOES[hold].rot[0];
+                        for (let r = 0; r < shape.length; r++)
+                            for (let c = 0; c < shape[r].length; c++) {
+                                if (shape[r][c]) {
+                                    const idx = r * 4 + c;
+                                    if (miniHoldCells[idx]) {
+                                        miniHoldCells[idx].style.background =
+                                            COLORS[hold];
+                                        miniHoldCells[idx].classList.add(
+                                            "filled"
+                                        );
+                                    }
+                                }
+                            }
+                    }
+                }
+
+                // input handling with DAS
+                const keys = {};
+                window.addEventListener("keydown", (e) => {
+                    if (e.key === "p" || e.key === "P") {
+                        togglePause();
+                        return;
+                    }
+                    if (e.key === "m" || e.key === "M") {
+                        muted = !muted;
+                        muteBtn.textContent = muted ? "Unmute" : "Mute";
+                        return;
+                    }
+                    if (!running) return;
+                    if (e.repeat) return;
+                    if (e.key === "ArrowLeft") {
+                        move(-1);
+                        startDas("left");
+                    } else if (e.key === "ArrowRight") {
+                        move(1);
+                        startDas("right");
+                    } else if (e.key === "ArrowUp") {
+                        rotate(1);
+                    } else if (e.key === "ArrowDown") {
+                        softDrop = true;
+                    } else if (e.key === " ") {
+                        hardDrop();
+                    } else if (e.key === "c" || e.key === "C") {
+                        holdPiece();
+                    }
+                });
+                window.addEventListener("keyup", (e) => {
+                    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                        stopDas();
+                    }
+                    if (e.key === "ArrowDown") {
+                        softDrop = false;
+                    }
+                });
+
+                function move(dir) {
+                    const p = { r: curPos.r, c: curPos.c + dir };
+                    if (!collision(p, curRot)) {
+                        curPos = p;
+                        render();
+                        beep(120);
+                    }
+                }
+
+                function startDas(dir) {
+                    moving = dir;
+                    dasTimer = performance.now();
+                }
+                function stopDas() {
+                    moving = null;
+                }
+
+                // main loop
+                function loop(t) {
+                    if (!running || paused) {
+                        lastTime = t;
+                        requestAnimationFrame(loop);
+                        return;
+                    }
+                    const dt = t - lastTime;
+                    if (!lastTime) {
+                    }
+                    lastTime = t;
+                    // DAS repeat
+                    if (moving) {
+                        if (t - dasTimer > dasDelay) {
+                            const step =
+                                Math.floor(
+                                    (t - dasTimer - dasDelay) / dasRepeat
+                                ) + 1;
+                            for (let i = 0; i < step; i++) {
+                                move(moving === "left" ? -1 : 1);
+                            }
+                        }
+                    }
+                    // drop
+                    if (softDrop) {
+                        if (t - lockTimer > 50) {
+                            softDropStep();
+                            lockTimer = t;
+                        }
+                    } else if (t - lockTimer > dropInterval) {
+                        if (
+                            !collision({ r: curPos.r + 1, c: curPos.c }, curRot)
+                        ) {
+                            curPos.r++;
+                        } else {
+                            // start lock timer
+                            // if piece cannot move down, increment lock timer and lock after lockDelay
+                            if (!lockTimer) lockTimer = t;
+                            else if (t - lockTimer > lockDelay) {
+                                lockPiece(false);
+                                lockTimer = 0;
+                            }
+                        }
+                        lockTimer = t;
+                    }
+                    render();
+                    requestAnimationFrame(loop);
+                }
+
+                // UI actions
+                startBtn.addEventListener("click", () => {
+                    reset();
+                    start();
+                });
+                pauseBtn.addEventListener("click", () => {
+                    togglePause();
+                });
+                muteBtn.addEventListener("click", () => {
+                    muted = !muted;
+                    muteBtn.textContent = muted ? "Unmute" : "Mute";
+                });
+                document
+                    .getElementById("leftBtn")
+                    .addEventListener("click", () => move(-1));
+                document
+                    .getElementById("rightBtn")
+                    .addEventListener("click", () => move(1));
+                document
+                    .getElementById("rotBtn")
+                    .addEventListener("click", () => rotate(1));
+                document
+                    .getElementById("softBtn")
+                    .addEventListener("click", () => softDropStep());
+
+                function togglePause() {
+                    if (!running) return;
+                    paused = !paused;
+                    overlay.style.display = paused ? "flex" : "none";
+                    overlay.textContent = paused ? "Paused" : " ";
+                    pauseBtn.textContent = paused ? "Resume" : "Pause";
+                }
+
+                function reset() {
+                    board = newBoard();
+                    bag = shuffleBag();
+                    queue = [];
+                    refillQueue();
+                    score = 0;
+                    level = 1;
+                    lines = 0;
+                    highScore = Number(
+                        localStorage.getItem("tetris_high") || 0
+                    );
+                    scoreEl.textContent = score;
+                    levelEl.textContent = level;
+                    highEl.textContent = highScore;
+                    overlay.style.display = "none";
+                }
+
+                function start() {
+                    running = true;
+                    paused = false;
+                    spawn();
+                    renderHold();
+                    render();
+                    lastTime = 0;
+                    requestAnimationFrame(loop);
+                }
+
+                // init
+                reset();
+                render();
+
+                // expose for debugging
+                window.tetris = { reset, start, board };
+            })();
+        </script>
+    </body>
+</html>
