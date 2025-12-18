@@ -183,6 +183,161 @@
                     display: flex;
                 }
             }
+
+            /* Enhanced Mobile Touch Controls */
+            .touch-controls {
+                display: none;
+                margin-top: 16px;
+                padding: 12px;
+                background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+            }
+
+            .touch-area {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 20px;
+            }
+
+            /* D-Pad for movement */
+            .dpad {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(3, 1fr);
+                gap: 6px;
+                width: 140px;
+                height: 140px;
+            }
+
+            .dpad-btn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(180deg, #0f3854, #0a2840);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 12px;
+                color: #dff0ff;
+                font-size: 22px;
+                cursor: pointer;
+                user-select: none;
+                -webkit-user-select: none;
+                touch-action: manipulation;
+                transition: all 0.1s ease;
+            }
+
+            .dpad-btn:active, .dpad-btn.active {
+                background: linear-gradient(180deg, #1a5a7a, #12445e);
+                transform: scale(0.95);
+                box-shadow: 0 0 15px rgba(89, 227, 255, 0.3);
+            }
+
+            .dpad-btn.empty {
+                background: transparent;
+                border: none;
+            }
+
+            /* Action buttons */
+            .action-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .action-row {
+                display: flex;
+                gap: 12px;
+            }
+
+            .action-btn {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                width: 65px;
+                height: 65px;
+                background: linear-gradient(180deg, #0f3854, #0a2840);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 50%;
+                color: #dff0ff;
+                font-size: 20px;
+                cursor: pointer;
+                user-select: none;
+                -webkit-user-select: none;
+                touch-action: manipulation;
+                transition: all 0.1s ease;
+            }
+
+            .action-btn:active, .action-btn.active {
+                transform: scale(0.92);
+                box-shadow: 0 0 20px rgba(89, 227, 255, 0.4);
+            }
+
+            .action-btn.rotate-btn {
+                background: linear-gradient(180deg, #2a4a6a, #1a3a5a);
+            }
+
+            .action-btn.hard-drop-btn {
+                background: linear-gradient(180deg, #4a2a5a, #3a1a4a);
+            }
+
+            .action-btn.hold-btn {
+                background: linear-gradient(180deg, #2a5a4a, #1a4a3a);
+            }
+
+            .action-btn-label {
+                font-size: 9px;
+                margin-top: 2px;
+                opacity: 0.7;
+            }
+
+            /* Swipe zone indicator */
+            .swipe-hint {
+                text-align: center;
+                font-size: 11px;
+                color: #6a8a9c;
+                margin-top: 8px;
+            }
+
+            @media (max-width: 860px) {
+                .touch-controls {
+                    display: block;
+                }
+                :root {
+                    --cell: 22px;
+                }
+                .board {
+                    margin: 0 auto;
+                }
+                .controls {
+                    display: none;
+                }
+            }
+
+            @media (max-width: 400px) {
+                :root {
+                    --cell: 18px;
+                }
+                .dpad {
+                    width: 120px;
+                    height: 120px;
+                }
+                .action-btn {
+                    width: 55px;
+                    height: 55px;
+                    font-size: 18px;
+                }
+            }
+
+            /* Mouse cursor on board */
+            .board {
+                cursor: pointer;
+            }
+
+            .board:active {
+                cursor: grabbing;
+            }
         </style>
     </head>
     <body>
@@ -235,7 +390,7 @@
                         >
                             <div class="controls">
                                 ← → move • ↑ rotate • ↓ soft • Space hard •
-                                Hold: C
+                                C hold • Mouse: click rotate, drag move, scroll rotate, dbl-click drop
                             </div>
                             <div style="display: flex; gap: 6px">
                                 <button id="leftBtn" class="ghost">◀</button>
@@ -285,6 +440,45 @@
                         piece (C) to swap strategically.
                     </div>
                 </aside>
+            </div>
+
+            <!-- Touch Controls for Mobile -->
+            <div class="touch-controls" id="touchControls">
+                <div class="touch-area">
+                    <!-- D-Pad -->
+                    <div class="dpad">
+                        <div class="dpad-btn empty"></div>
+                        <div class="dpad-btn" id="dpadUp">↑</div>
+                        <div class="dpad-btn empty"></div>
+                        <div class="dpad-btn" id="dpadLeft">←</div>
+                        <div class="dpad-btn empty"></div>
+                        <div class="dpad-btn" id="dpadRight">→</div>
+                        <div class="dpad-btn empty"></div>
+                        <div class="dpad-btn" id="dpadDown">↓</div>
+                        <div class="dpad-btn empty"></div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <div class="action-row">
+                            <button class="action-btn rotate-btn" id="rotateTouchBtn">
+                                ⤴
+                                <span class="action-btn-label">Rotate</span>
+                            </button>
+                            <button class="action-btn hard-drop-btn" id="hardDropTouchBtn">
+                                ⬇
+                                <span class="action-btn-label">Drop</span>
+                            </button>
+                        </div>
+                        <div class="action-row">
+                            <button class="action-btn hold-btn" id="holdTouchBtn">
+                                ⇄
+                                <span class="action-btn-label">Hold</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="swipe-hint">Swipe on game board: ← → move • ↓ soft drop • Swipe up = hard drop</div>
             </div>
         </div>
 
@@ -959,6 +1153,207 @@
                 // init
                 reset();
                 render();
+
+                // ========== TOUCH & MOUSE CONTROLS ==========
+
+                // Touch controls for D-Pad and action buttons
+                const dpadLeft = document.getElementById('dpadLeft');
+                const dpadRight = document.getElementById('dpadRight');
+                const dpadUp = document.getElementById('dpadUp');
+                const dpadDown = document.getElementById('dpadDown');
+                const rotateTouchBtn = document.getElementById('rotateTouchBtn');
+                const hardDropTouchBtn = document.getElementById('hardDropTouchBtn');
+                const holdTouchBtn = document.getElementById('holdTouchBtn');
+
+                // Helper to add touch event with visual feedback
+                function addTouchBtn(el, action, repeatAction = false) {
+                    if (!el) return;
+                    let intervalId = null;
+                    let isHolding = false;
+
+                    const startAction = (e) => {
+                        e.preventDefault();
+                        if (!running || paused) return;
+                        el.classList.add('active');
+                        action();
+                        if (repeatAction) {
+                            isHolding = true;
+                            intervalId = setInterval(() => {
+                                if (isHolding) action();
+                            }, 80);
+                        }
+                    };
+
+                    const endAction = () => {
+                        el.classList.remove('active');
+                        isHolding = false;
+                        if (intervalId) {
+                            clearInterval(intervalId);
+                            intervalId = null;
+                        }
+                    };
+
+                    el.addEventListener('touchstart', startAction, { passive: false });
+                    el.addEventListener('touchend', endAction);
+                    el.addEventListener('touchcancel', endAction);
+                    el.addEventListener('mousedown', startAction);
+                    el.addEventListener('mouseup', endAction);
+                    el.addEventListener('mouseleave', endAction);
+                }
+
+                // D-Pad controls (with repeat for left/right/down)
+                addTouchBtn(dpadLeft, () => move(-1), true);
+                addTouchBtn(dpadRight, () => move(1), true);
+                addTouchBtn(dpadUp, () => rotate(1), false);
+                addTouchBtn(dpadDown, () => softDropStep(), true);
+
+                // Action buttons
+                addTouchBtn(rotateTouchBtn, () => rotate(1), false);
+                addTouchBtn(hardDropTouchBtn, () => hardDrop(), false);
+                addTouchBtn(holdTouchBtn, () => holdPiece(), false);
+
+                // ========== SWIPE GESTURES ON BOARD ==========
+                let touchStartX = null;
+                let touchStartY = null;
+                let touchStartTime = null;
+                const SWIPE_THRESHOLD = 30;
+                const TAP_THRESHOLD = 200;
+
+                boardEl.addEventListener('touchstart', (e) => {
+                    if (!running || paused) return;
+                    const touch = e.touches[0];
+                    touchStartX = touch.clientX;
+                    touchStartY = touch.clientY;
+                    touchStartTime = Date.now();
+                }, { passive: true });
+
+                boardEl.addEventListener('touchmove', (e) => {
+                    if (!running || paused || touchStartX === null) return;
+                    const touch = e.touches[0];
+                    const deltaX = touch.clientX - touchStartX;
+                    const deltaY = touch.clientY - touchStartY;
+
+                    // Horizontal swipe for movement
+                    if (Math.abs(deltaX) > SWIPE_THRESHOLD) {
+                        if (deltaX > 0) {
+                            move(1);
+                        } else {
+                            move(-1);
+                        }
+                        touchStartX = touch.clientX;
+                    }
+
+                    // Downward swipe for soft drop
+                    if (deltaY > SWIPE_THRESHOLD) {
+                        softDropStep();
+                        touchStartY = touch.clientY;
+                    }
+                }, { passive: true });
+
+                boardEl.addEventListener('touchend', (e) => {
+                    if (!running || paused) return;
+                    const touchEndTime = Date.now();
+                    const touch = e.changedTouches[0];
+                    
+                    if (touchStartX !== null && touchStartY !== null) {
+                        const deltaX = touch.clientX - touchStartX;
+                        const deltaY = touch.clientY - touchStartY;
+                        const timeDiff = touchEndTime - touchStartTime;
+
+                        // Quick upward swipe = hard drop
+                        if (deltaY < -SWIPE_THRESHOLD * 2 && timeDiff < 300) {
+                            hardDrop();
+                        }
+                        // Quick tap = rotate
+                        else if (Math.abs(deltaX) < 15 && Math.abs(deltaY) < 15 && timeDiff < TAP_THRESHOLD) {
+                            rotate(1);
+                        }
+                    }
+
+                    touchStartX = null;
+                    touchStartY = null;
+                    touchStartTime = null;
+                });
+
+                // ========== MOUSE CONTROLS ON BOARD ==========
+                let mouseDown = false;
+                let mouseStartX = null;
+                let lastMoveX = null;
+                const MOUSE_MOVE_THRESHOLD = 25;
+
+                // Left click = rotate, Right click = hold
+                boardEl.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    if (!running || paused) return;
+                    holdPiece();
+                });
+
+                boardEl.addEventListener('mousedown', (e) => {
+                    if (!running || paused) return;
+                    if (e.button === 0) { // Left click
+                        mouseDown = true;
+                        mouseStartX = e.clientX;
+                        lastMoveX = e.clientX;
+                    }
+                });
+
+                boardEl.addEventListener('mousemove', (e) => {
+                    if (!running || paused || !mouseDown) return;
+                    const deltaX = e.clientX - lastMoveX;
+
+                    if (Math.abs(deltaX) > MOUSE_MOVE_THRESHOLD) {
+                        if (deltaX > 0) {
+                            move(1);
+                        } else {
+                            move(-1);
+                        }
+                        lastMoveX = e.clientX;
+                    }
+                });
+
+                boardEl.addEventListener('mouseup', (e) => {
+                    if (!running || paused) return;
+                    if (e.button === 0 && mouseDown) {
+                        const totalDeltaX = Math.abs(e.clientX - mouseStartX);
+                        // If it was a click (not drag), rotate
+                        if (totalDeltaX < 10) {
+                            rotate(1);
+                        }
+                    }
+                    mouseDown = false;
+                    mouseStartX = null;
+                    lastMoveX = null;
+                });
+
+                boardEl.addEventListener('mouseleave', () => {
+                    mouseDown = false;
+                    mouseStartX = null;
+                    lastMoveX = null;
+                });
+
+                // Mouse wheel to rotate
+                boardEl.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    if (!running || paused) return;
+                    if (e.deltaY < 0) {
+                        rotate(1); // Scroll up = rotate clockwise
+                    } else {
+                        rotate(-1); // Scroll down = rotate counter-clockwise
+                    }
+                }, { passive: false });
+
+                // Double-click = hard drop
+                boardEl.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    if (!running || paused) return;
+                    hardDrop();
+                });
+
+                // ========== PREVENT DEFAULT TOUCH BEHAVIORS ==========
+                // Prevent scroll/zoom on touch controls
+                document.querySelector('.touch-controls')?.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                }, { passive: false });
 
                 // expose for debugging
                 window.tetris = { reset, start, board };
