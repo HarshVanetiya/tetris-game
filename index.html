@@ -15,9 +15,11 @@
                 font-family: Inter, system-ui, Segoe UI, Roboto, Helvetica,
                     Arial;
             }
-            html,
-            body {
+            html {
                 height: 100%;
+            }
+            body {
+                min-height: 100%;
                 margin: 0;
             }
             body {
@@ -140,8 +142,9 @@
             /* next and hold */
             .mini-grid {
                 display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                grid-template-rows: repeat(4, 1fr);
+                grid-template-columns: repeat(4, 28px);
+                grid-template-rows: repeat(4, 28px);
+                justify-content: center;
                 gap: 6px;
                 padding: 8px;
                 background: linear-gradient(180deg, #042033, #06263a);
@@ -313,6 +316,25 @@
                 .controls {
                     display: none;
                 }
+                /* phones: put touch controls right under the board, stats after */
+                .container {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 18px;
+                }
+                .layout {
+                    display: contents;
+                }
+                .layout > :first-child {
+                    order: 1;
+                }
+                .touch-controls {
+                    order: 2;
+                    margin-top: 0;
+                }
+                .layout > .stats {
+                    order: 3;
+                }
             }
 
             @media (max-width: 400px) {
@@ -348,6 +370,8 @@
                         <div
                             style="
                                 display: flex;
+                                flex-wrap: wrap;
+                                gap: 10px;
                                 justify-content: space-between;
                                 align-items: center;
                             "
@@ -355,7 +379,7 @@
                             <div>
                                 <h1>Tetris — Polished</h1>
                                 <div class="sub">
-                                    Improved visuals, hold, ghost piece, 5-piece
+                                    Improved visuals, hold, ghost piece, next-piece
                                     preview, smooth controls, local high score
                                 </div>
                             </div>
@@ -519,16 +543,12 @@
                 for (let i = 0; i < 16; i++) {
                     const n = document.createElement("div");
                     n.className = "mini-cell";
-                    n.style.width = "100%";
-                    n.style.height = "100%";
                     nextEl.appendChild(n);
                     miniNextCells.push(n);
                 }
                 for (let i = 0; i < 16; i++) {
                     const h = document.createElement("div");
                     h.className = "mini-cell";
-                    h.style.width = "100%";
-                    h.style.height = "100%";
                     holdEl.appendChild(h);
                     miniHoldCells.push(h);
                 }
@@ -894,6 +914,8 @@
                                 el.style.background = COLORS[board[r][c]];
                             }
                         }
+                    // nothing to draw until the first piece spawns
+                    if (!current) return;
                     // ghost
                     const ghostPos = findGhost();
                     const ghostShape = TETROMINOES[current].rot[curRot];
@@ -988,6 +1010,10 @@
                 // input handling with DAS
                 const keys = {};
                 window.addEventListener("keydown", (e) => {
+                    // stop Space/arrows from scrolling the page or re-clicking a focused button
+                    if ([" ", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+                        e.preventDefault();
+                    }
                     if (e.key === "p" || e.key === "P") {
                         togglePause();
                         return;
@@ -1092,6 +1118,7 @@
 
                 // UI actions
                 startBtn.addEventListener("click", () => {
+                    startBtn.blur();
                     reset();
                     start();
                 });
