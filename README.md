@@ -2,7 +2,7 @@
 
 A complete, polished Tetris game in a single HTML file: no frameworks, no build step, no dependencies. Plays on desktop with keyboard or mouse, and on phones with touch buttons and swipe gestures.
 
-**[▶ Play it live](https://harshvanetiya.github.io/tetris-game/)**
+**[▶ Play it live](https://tetris-game-lac.vercel.app)**
 
 <p align="center">
   <img src="screenshots/desktop.png" alt="Tetris gameplay on desktop" width="640">
